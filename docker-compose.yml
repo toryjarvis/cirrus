@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: cirrus_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cirrus
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cirrus
+    ports:
+      - "5433:5432"
+    volumes:
+      - cirrus_db_data:/var/lib/postgresql/data
+  
+  redis:
+    image: redis:7-alpine
+    container_name: cirrus_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+  
+volumes:
+  cirrus_db_data:

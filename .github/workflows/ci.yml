@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cirrus
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: cirrus
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Build all services
+        run: |
+          go build ./cmd/link/...
+          go build ./cmd/redirect/...
+          go build ./cmd/analytics/...
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://cirrus:password@127.0.0.1:5433/cirrus?sslmode=disable
+        run: |
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          migrate -path db/migrations -database "$DATABASE_URL" up
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://cirrus:password@127.0.0.1:5433/cirrus?sslmode=disable
+          JWT_SECRET: ci_test_secret
+        run: go test ./...

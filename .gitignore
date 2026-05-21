@@ -9,6 +9,13 @@ bin/
 # Go build cache
 /tmp
 
+# Go workspace
+vendor/
+
+# Test outputs
+*.test
+*.out
+
 # IDE
 .vscode/
 .idea/

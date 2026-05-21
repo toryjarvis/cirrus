@@ -1,7 +1,7 @@
 # Cirrus
 
 ![Status](https://img.shields.io/badge/Status-In%20Development-orange)
-![CI](https://github.com/<toryjarvis>/cirrus/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/toryjarvis/cirrus/actions/workflows/ci.yml/badge.svg)
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat&logo=postgresql&logoColor=white)

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"os"
+	"fmt"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,13 +9,7 @@ import (
 )
 
 // protected function middleware
-func Protected() fiber.Handler {
-	//get auth header
-	//get token
-	//parse token?
-	//validate
-	// handle errors
-	// handle claims?
+func Protected(jwtSecret []byte) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
@@ -23,8 +17,12 @@ func Protected() fiber.Handler {
 		}
 
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+
 		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-			return []byte(os.Getenv("JWT_SECRET")), nil
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+			}
+			return jwtSecret, nil
 		})
 
 		if err != nil || !token.Valid {

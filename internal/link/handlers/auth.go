@@ -1,34 +1,28 @@
 package handlers
+
 import (
-	"os"
-	"log"
+	"strings"
 	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
-	DB *sqlx.DB
+	DB        *sqlx.DB
+	JWTSecret []byte
 }
 
 type RegisterRequest struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
 type LoginRequest struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
-}
-
-func getJWTSecret() []byte {
-    secret := os.Getenv("JWT_SECRET")
-    if secret == "" {
-        log.Fatal("JWT_SECRET not set")
-    }
-    return []byte(secret)
 }
 
 // Registration Handler
@@ -36,6 +30,14 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var req RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+	}
+
+	if req.Email == "" || req.Password == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "email and password required"})
+	}
+
+	if len(req.Password) < 8 {
+		return c.Status(400).JSON(fiber.Map{"error": "password must be at least 8 characters"})
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -49,6 +51,9 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		req.Email, string(hash),
 	).Scan(&id)
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			return c.Status(409).JSON(fiber.Map{"error": "email already in use"})
+		}
 		return c.Status(500).JSON(fiber.Map{"error": "could not create user"})
 	}
 
@@ -64,7 +69,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	var passwordHash string
 	var id string
-	err:= h.DB.QueryRow(
+	err := h.DB.QueryRow(
 		"SELECT id, password_hash FROM users WHERE email = $1",
 		req.Email,
 	).Scan(&id, &passwordHash)
@@ -72,7 +77,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{"error": "invalid email or password"})
 	}
-	
+
 	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password)); err != nil {
 		return c.Status(401).JSON(fiber.Map{"error": "invalid credentials"})
 	}
@@ -80,10 +85,10 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	// JWT token gen
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": id,
-		"exp": time.Now().Add(24 * time.Hour).Unix(),
+		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	})
 
-	signedToken, err := token.SignedString(getJWTSecret())
+	signedToken, err := token.SignedString(h.JWTSecret)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "could not sign token"})
 	}

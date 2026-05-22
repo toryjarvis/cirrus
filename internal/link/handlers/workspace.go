@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -22,7 +21,10 @@ type UpdateWorkspaceRequest struct {
 
 // Create
 func (h *WorkspaceHandler) Create(c *fiber.Ctx) error {
-	userID := fmt.Sprintf("%v", c.Locals("user_id"))
+	userID, ok := c.Locals("user_id").(string)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "unauthorized"})
+	}
 
 	var req CreateWorkspaceRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -48,7 +50,10 @@ func (h *WorkspaceHandler) Create(c *fiber.Ctx) error {
 
 // List
 func (h *WorkspaceHandler) List(c *fiber.Ctx) error {
-	userID := fmt.Sprintf("%v", c.Locals("user_id"))
+	userID, ok := c.Locals("user_id").(string)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "unauthorized"})
+	}
 
 	rows, err := h.DB.Query(`
 	SELECT id, name, created_at
@@ -79,7 +84,11 @@ func (h *WorkspaceHandler) List(c *fiber.Ctx) error {
 
 // Update
 func (h *WorkspaceHandler) Update(c *fiber.Ctx) error {
-	userID := fmt.Sprintf("%v", c.Locals("user_id"))
+	userID, ok := c.Locals("user_id").(string)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
 	id := c.Params("id")
 
 	var req UpdateWorkspaceRequest
@@ -103,12 +112,21 @@ func (h *WorkspaceHandler) Update(c *fiber.Ctx) error {
 
 // Delete
 func (h *WorkspaceHandler) Delete(c *fiber.Ctx) error {
-	userID := fmt.Sprintf("%v", c.Locals("user_id"))
+	userID, ok := c.Locals("user_id").(string)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"error": "unauthorized"})
+	}
+
 	id := c.Params("id")
 
-	_, err := h.DB.Exec(`DELETE FROM workspaces WHERE id = $1 AND user_id = $2`, id, userID)
+	result, err := h.DB.Exec(`DELETE FROM workspaces WHERE id = $1 AND user_id = $2`, id, userID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "could not delete workspace"})
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "workspace not found"})
 	}
 
 	return c.JSON(fiber.Map{"message": "workspace deleted"})

@@ -17,11 +17,16 @@ func main() {
 		log.Fatal("DATABASE_URL not set")
 	}
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET not set")
+	}
+
 	database := db.Connect(dsn)
 
 	app := fiber.New()
 
-	routes.Register(app, database)
+	routes.Register(app, database, []byte(jwtSecret))
 
 	log.Fatal(app.Listen(":3001"))
 }

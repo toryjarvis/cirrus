@@ -34,7 +34,7 @@
 
 Last Updated: May 2026
 
-Sprint 1: project foundation, database schema, and JWT auth are in place. Currently building out the core link management and redirect services.
+Sprint 2: Core link services set and other backend preparations
 
 ## Contributions
 

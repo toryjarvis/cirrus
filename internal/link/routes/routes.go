@@ -8,8 +8,8 @@ import (
 )
 
 // Register routes for link services
-func Register(app *fiber.App, db *sqlx.DB) {
-	authHandler := &handlers.AuthHandler{DB: db}
+func Register(app *fiber.App, db *sqlx.DB, jwtSecret []byte) {
+	authHandler := &handlers.AuthHandler{DB: db, JWTSecret: jwtSecret}
 	linkHandler := &handlers.LinkHandler{DB: db}
 	workspaceHandler := &handlers.WorkspaceHandler{DB: db}
 
@@ -18,7 +18,7 @@ func Register(app *fiber.App, db *sqlx.DB) {
 	app.Post("/auth/login", authHandler.Login)
 
 	//Links
-	api := app.Group("/api", middleware.Protected())
+	api := app.Group("/api", middleware.Protected(jwtSecret))
 	//Post
 	api.Post("/links", linkHandler.Create)
 	//Get
